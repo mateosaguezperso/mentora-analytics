@@ -8,11 +8,15 @@ models:
       Incremental (upsert on booking_id with a lookback window).
     config:
       tags: [core, incremental]
+      contract:
+        enforced: true
     columns:
       - name: booking_id
+        data_type: string
         description: Primary key.
         data_tests: [unique, not_null]
       - name: student_id
+        data_type: integer
         data_tests:
           - not_null
           - relationships:
@@ -20,6 +24,7 @@ models:
                 to: ref('dim_students')
                 field: student_id
       - name: mentor_id
+        data_type: integer
         data_tests:
           - not_null
           - relationships:
@@ -27,6 +32,7 @@ models:
                 to: ref('dim_mentors')
                 field: mentor_id
       - name: company_id
+        data_type: integer
         description: Company of the mentor (denormalised for BI filtering / clustering).
         data_tests:
           - not_null
@@ -35,18 +41,47 @@ models:
                 to: ref('dim_companies')
                 field: company_id
       - name: current_status
+        data_type: string
         data_tests:
           - accepted_values:
               arguments:
                 values: [requested, accepted, declined, cancelled, completed, expired]
+      - name: requested_at
+        data_type: timestamp
+      - name: scheduled_at
+        data_type: timestamp
+      - name: responded_at
+        data_type: timestamp
+      - name: accepted_at
+        data_type: timestamp
+      - name: declined_at
+        data_type: timestamp
+      - name: expired_at
+        data_type: timestamp
+      - name: cancelled_at
+        data_type: timestamp
+      - name: completed_at
+        data_type: timestamp
+      - name: is_responded
+        data_type: boolean
+      - name: is_accepted
+        data_type: boolean
+      - name: is_completed
+        data_type: boolean
       - name: response_time_hours
+        data_type: "{{ 'float64' if target.type == 'bigquery' else 'double' }}"
         description: Hours between the request and the mentor's first answer (accept or decline).
         data_tests:
           - dbt_utils.accepted_range:
               arguments:
                 min_value: 0
+      - name: lead_time_days
+        data_type: bigint
       - name: rating
+        data_type: integer
         description: 1-5 rating left by the student. Null if not reviewed.
+      - name: last_updated_at
+        data_type: timestamp
     data_tests:
       - dbt_utils.expression_is_true:
           arguments:
@@ -63,15 +98,48 @@ models:
     description: One row per student with activation flags.
     config:
       tags: [core]
+      contract:
+        enforced: true
     columns:
       - name: student_id
+        data_type: integer
         data_tests: [unique, not_null]
+      - name: email
+        data_type: string
+      - name: education_level
+        data_type: string
+      - name: acquisition_channel
+        data_type: string
+      - name: city
+        data_type: string
+      - name: signed_up_at
+        data_type: timestamp
+      - name: signup_cohort_month
+        data_type: date
+      - name: first_requested_at
+        data_type: timestamp
+      - name: first_completed_at
+        data_type: timestamp
+      - name: last_completed_at
+        data_type: timestamp
+      - name: bookings_requested
+        data_type: bigint
+      - name: conversations_completed
+        data_type: bigint
+      - name: activation_deadline_at
+        data_type: timestamp
+      - name: days_to_first_conversation
+        data_type: bigint
+      - name: has_requested
+        data_type: boolean
       - name: is_activated
+        data_type: boolean
         description: >
           True if the student completed a first conversation within
           `activation_window_days` (default 30) of signup.
         data_tests: [not_null]
       - name: is_activation_window_closed
+        data_type: boolean
         description: >
           False for students who signed up less than `activation_window_days`
           before the analysis date. Filter on it to avoid immature cohorts.
@@ -80,19 +148,60 @@ models:
     description: One row per mentor, enriched with company attributes.
     config:
       tags: [core]
+      contract:
+        enforced: true
     columns:
       - name: mentor_id
+        data_type: integer
         data_tests: [unique, not_null]
+      - name: company_id
+        data_type: integer
+      - name: company_name
+        data_type: string
+      - name: industry
+        data_type: string
+      - name: job_title
+        data_type: string
+      - name: job_family
+        data_type: string
+      - name: is_active
+        data_type: boolean
+      - name: joined_at
+        data_type: timestamp
 
   - name: dim_companies
     description: One row per customer company with its current plan, MRR and churn status.
     config:
       tags: [core]
+      contract:
+        enforced: true
     columns:
       - name: company_id
+        data_type: integer
         data_tests: [unique, not_null]
+      - name: company_name
+        data_type: string
+      - name: industry
+        data_type: string
+      - name: employee_range
+        data_type: string
+      - name: created_at
+        data_type: timestamp
+      - name: first_paying_month
+        data_type: date
       - name: current_mrr_eur
+        data_type: "{{ 'float64' if target.type == 'bigquery' else 'double' }}"
         data_tests: [not_null]
+      - name: current_plan
+        data_type: string
+      - name: is_active_customer
+        data_type: boolean
+      - name: churned_month
+        data_type: date
+      - name: mentors_total
+        data_type: bigint
+      - name: mentors_active
+        data_type: bigint
     data_tests:
       - dbt_utils.expression_is_true:
           arguments:
@@ -101,6 +210,7 @@ models:
             description: Every non-active customer must have a churn month.
 
 unit_tests:
+
   - name: test_dim_students_activation_window_boundaries
     description: >
       Activation window is inclusive: completing exactly 30 days after signup

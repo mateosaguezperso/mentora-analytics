@@ -21,10 +21,10 @@ monthly as (
         -sum(case when mrr_movement = 'contraction' then mrr_change_eur else 0 end)   as contraction_mrr_eur,
         -sum(case when mrr_movement = 'churn'       then mrr_change_eur else 0 end)   as churned_mrr_eur,
         sum(mrr_eur)                                                                   as closing_mrr_eur,
-        sum(case when previous_mrr_eur > 0 then 1 else 0 end)                          as opening_paying_companies,
-        sum(case when mrr_eur > 0 then 1 else 0 end)                                   as paying_companies,
-        sum(case when mrr_movement = 'new'   then 1 else 0 end)                        as new_companies,
-        sum(case when mrr_movement = 'churn' then 1 else 0 end)                        as churned_companies
+        count(case when previous_mrr_eur > 0 then 1 end)                               as opening_paying_companies,
+        count(case when mrr_eur > 0 then 1 end)                                        as paying_companies,
+        count(case when mrr_movement = 'new'   then 1 end)                             as new_companies,
+        count(case when mrr_movement = 'churn' then 1 end)                             as churned_companies
 
     from movements
     group by month_start

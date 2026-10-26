@@ -7,17 +7,32 @@ models:
       movement type (new, expansion, contraction, churn, reactivation, retained).
     config:
       tags: [finance]
+      contract:
+        enforced: true
     columns:
       - name: company_month_key
+        data_type: string
         description: Surrogate key on (company_id, month_start).
         data_tests: [unique, not_null]
       - name: company_id
+        data_type: integer
         data_tests:
           - relationships:
               arguments:
                 to: ref('dim_companies')
                 field: company_id
+      - name: month_start
+        data_type: date
+      - name: plan_name
+        data_type: string
+      - name: previous_mrr_eur
+        data_type: "{{ 'float64' if target.type == 'bigquery' else 'double' }}"
+      - name: mrr_eur
+        data_type: "{{ 'float64' if target.type == 'bigquery' else 'double' }}"
+      - name: mrr_change_eur
+        data_type: "{{ 'float64' if target.type == 'bigquery' else 'double' }}"
       - name: mrr_movement
+        data_type: string
         data_tests:
           - not_null
           - accepted_values:
@@ -30,13 +45,42 @@ models:
       revenue dashboard.
     config:
       tags: [finance]
+      contract:
+        enforced: true
     columns:
       - name: month_start
+        data_type: date
         data_tests: [unique, not_null]
+      - name: opening_mrr_eur
+        data_type: "{{ 'float64' if target.type == 'bigquery' else 'double' }}"
+      - name: new_mrr_eur
+        data_type: "{{ 'float64' if target.type == 'bigquery' else 'double' }}"
+      - name: reactivation_mrr_eur
+        data_type: "{{ 'float64' if target.type == 'bigquery' else 'double' }}"
+      - name: expansion_mrr_eur
+        data_type: "{{ 'float64' if target.type == 'bigquery' else 'double' }}"
+      - name: contraction_mrr_eur
+        data_type: "{{ 'float64' if target.type == 'bigquery' else 'double' }}"
+      - name: churned_mrr_eur
+        data_type: "{{ 'float64' if target.type == 'bigquery' else 'double' }}"
       - name: closing_mrr_eur
+        data_type: "{{ 'float64' if target.type == 'bigquery' else 'double' }}"
         data_tests: [not_null]
+      - name: opening_paying_companies
+        data_type: bigint
+      - name: paying_companies
+        data_type: bigint
+      - name: new_companies
+        data_type: bigint
+      - name: churned_companies
+        data_type: bigint
+      - name: net_revenue_retention
+        data_type: "{{ 'float64' if target.type == 'bigquery' else 'double' }}"
+      - name: logo_churn_rate
+        data_type: "{{ 'float64' if target.type == 'bigquery' else 'double' }}"
 
 unit_tests:
+
   - name: test_mrr_movements_classification
     description: >
       One company goes through every movement type:

@@ -50,7 +50,7 @@ mentor_counts as (
     select
         company_id,
         count(*)                                             as mentors_total,
-        sum(case when is_active then 1 else 0 end)           as mentors_active
+        count(case when is_active then 1 end)                as mentors_active
 
     from mentors
     group by company_id
