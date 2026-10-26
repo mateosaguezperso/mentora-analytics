@@ -6,6 +6,30 @@ on:
     branches: [main]
 
 jobs:
+  lint:
+    name: SQLFluff lint
+    runs-on: ubuntu-latest
+    env:
+      DBT_TARGET: duckdb
+      DBT_PROFILES_DIR: .
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt -r requirements-dev.txt
+
+      - name: dbt deps
+        run: dbt deps
+
+      - name: Lint SQL (models, tests, analyses)
+        run: sqlfluff lint models tests analyses --format github-annotation-native
+
   build:
     name: dbt build (DuckDB)
     runs-on: ubuntu-latest

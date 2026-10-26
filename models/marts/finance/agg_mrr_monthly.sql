@@ -21,10 +21,10 @@ monthly as (
         -sum(case when mrr_movement = 'contraction' then mrr_change_eur else 0 end)   as contraction_mrr_eur,
         -sum(case when mrr_movement = 'churn'       then mrr_change_eur else 0 end)   as churned_mrr_eur,
         sum(mrr_eur)                                                                   as closing_mrr_eur,
-        sum(case when previous_mrr_eur > 0 then 1 else 0 end)                          as opening_paying_companies,
-        sum(case when mrr_eur > 0 then 1 else 0 end)                                   as paying_companies,
-        sum(case when mrr_movement = 'new'   then 1 else 0 end)                        as new_companies,
-        sum(case when mrr_movement = 'churn' then 1 else 0 end)                        as churned_companies
+        count(case when previous_mrr_eur > 0 then 1 end)                               as opening_paying_companies,
+        count(case when mrr_eur > 0 then 1 end)                                        as paying_companies,
+        count(case when mrr_movement = 'new'   then 1 end)                             as new_companies,
+        count(case when mrr_movement = 'churn' then 1 end)                             as churned_companies
 
     from movements
     group by month_start
@@ -36,9 +36,10 @@ select
     -- NRR: what the opening customer base is worth one month later
     round(
         (opening_mrr_eur + expansion_mrr_eur - contraction_mrr_eur - churned_mrr_eur)
-        / nullif(opening_mrr_eur, 0)
-    , 4)                                                                               as net_revenue_retention,
+        / nullif(opening_mrr_eur, 0),
+        4
+    )                                                                                  as net_revenue_retention,
     round(1.0 * churned_companies / nullif(opening_paying_companies, 0), 4)
-                                                                                       as logo_churn_rate
+        as logo_churn_rate
 
 from monthly

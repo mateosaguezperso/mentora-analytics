@@ -25,9 +25,9 @@ stats as (
     select
         mentor_id,
         count(*)                                                     as requests_received,
-        sum(case when is_responded then 1 else 0 end)                as requests_responded,
-        sum(case when is_accepted  then 1 else 0 end)                as requests_accepted,
-        sum(case when is_completed then 1 else 0 end)                as conversations_completed,
+        count(case when is_responded then 1 end)                     as requests_responded,
+        count(case when is_accepted  then 1 end)                     as requests_accepted,
+        count(case when is_completed then 1 end)                     as conversations_completed,
         {{ median('response_time_hours') }}                          as median_response_time_hours,
         avg(rating)                                                  as avg_rating,
         count(rating)                                                as ratings_count
@@ -70,9 +70,9 @@ select
     case
         when coalesce(rates.requests_received, 0) < 5           then 'not_enough_data'
         when rates.response_rate < 0.8
-          or rates.median_response_time_hours > 72              then 'unresponsive'
+            or rates.median_response_time_hours > 72            then 'unresponsive'
         when rates.acceptance_rate >= 0.85
-         and coalesce(rates.avg_rating, 0) >= 4.3               then 'top_mentor'
+            and coalesce(rates.avg_rating, 0) >= 4.3            then 'top_mentor'
         else 'standard'
     end                                           as performance_segment
 

@@ -71,8 +71,8 @@ company_mrr as (
         on  subscriptions.company_id = company_months.company_id
         and subscriptions.started_at < company_months.next_month_start
         and (
-                subscriptions.ended_at is null
-             or subscriptions.ended_at >= company_months.next_month_start
+            subscriptions.ended_at is null
+            or subscriptions.ended_at >= company_months.next_month_start
         )
     group by
         company_months.company_id,

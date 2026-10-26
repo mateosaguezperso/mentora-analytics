@@ -20,7 +20,7 @@ bookings_monthly as (
         company_id,
         cast({{ dbt.date_trunc('month', 'requested_at') }} as date)   as month_start,
         count(*)                                                      as requests_received,
-        sum(case when is_completed then 1 else 0 end)                 as conversations_completed
+        count(case when is_completed then 1 end)                      as conversations_completed
 
     from {{ ref('fct_bookings') }}
     group by
@@ -50,10 +50,12 @@ rolling as (
 
     select
         *,
-        sum(conversations_completed) over (
-            partition by company_id
-            order by month_start
-            rows between 2 preceding and current row
+        cast(
+            sum(conversations_completed) over (
+                partition by company_id
+                order by month_start
+                rows between 2 preceding and current row
+            ) as {{ dbt.type_bigint() }}
         ) as conversations_completed_rolling_3m
 
     from joined

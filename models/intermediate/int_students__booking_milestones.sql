@@ -12,7 +12,7 @@ select
     min(completed_at)                                                   as first_completed_at,
     max(completed_at)                                                   as last_completed_at,
     count(*)                                                            as bookings_requested,
-    sum(case when current_status = 'completed' then 1 else 0 end)       as conversations_completed
+    count(case when current_status = 'completed' then 1 end)            as conversations_completed
 
 from bookings
 group by student_id

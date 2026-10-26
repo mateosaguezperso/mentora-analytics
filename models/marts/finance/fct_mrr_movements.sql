@@ -25,15 +25,18 @@ with_previous as (
         plan_name,
         mrr_eur,
         coalesce(
-            lag(mrr_eur) over (partition by company_id order by month_start)
-        , 0)                                                        as previous_mrr_eur,
+            lag(mrr_eur) over (partition by company_id order by month_start),
+            0
+        )                                                           as previous_mrr_eur,
         coalesce(
-            sum(case when mrr_eur > 0 then 1 else 0 end) over (
-                partition by company_id
-                order by month_start
-                rows between unbounded preceding and 1 preceding
-            )
-        , 0)                                                        as prior_paying_months
+            sum(case when mrr_eur > 0 then 1 else 0 end)
+                over (
+                    partition by company_id
+                    order by month_start
+                    rows between unbounded preceding and 1 preceding
+                ),
+            0
+        )                                                           as prior_paying_months
 
     from mrr_monthly
 

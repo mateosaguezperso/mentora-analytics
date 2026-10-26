@@ -8,6 +8,8 @@ models:
       Built for a Metabase pivot / heatmap.
     config:
       tags: [product]
+      contract:
+        enforced: true
     data_tests:
       - dbt_utils.unique_combination_of_columns:
           arguments:
@@ -18,7 +20,18 @@ models:
           config:
             description: Month 0 retention is 100 % by definition of the cohort.
     columns:
+      - name: cohort_month
+        data_type: date
+      - name: activity_month
+        data_type: date
+      - name: months_since_first
+        data_type: bigint
+      - name: cohort_size
+        data_type: bigint
+      - name: active_students
+        data_type: bigint
       - name: retention_rate
+        data_type: "{{ 'float64' if target.type == 'bigquery' else 'double' }}"
         data_tests:
           - not_null
           - dbt_utils.accepted_range:
@@ -33,20 +46,52 @@ models:
       community team.
     config:
       tags: [product]
+      contract:
+        enforced: true
     columns:
       - name: mentor_id
+        data_type: integer
         data_tests: [unique, not_null]
-      - name: performance_segment
-        data_tests:
-          - accepted_values:
-              arguments:
-                values: [not_enough_data, unresponsive, top_mentor, standard]
+      - name: company_id
+        data_type: integer
+      - name: company_name
+        data_type: string
+      - name: job_family
+        data_type: string
+      - name: is_active
+        data_type: boolean
+      - name: requests_received
+        data_type: bigint
+      - name: requests_responded
+        data_type: bigint
+      - name: requests_accepted
+        data_type: bigint
+      - name: conversations_completed
+        data_type: bigint
       - name: response_rate
+        data_type: "{{ 'float64' if target.type == 'bigquery' else 'double' }}"
         data_tests:
           - dbt_utils.accepted_range:
               arguments:
                 min_value: 0
                 max_value: 1
+
+      - name: acceptance_rate
+        data_type: "{{ 'float64' if target.type == 'bigquery' else 'double' }}"
+      - name: completion_rate
+        data_type: "{{ 'float64' if target.type == 'bigquery' else 'double' }}"
+      - name: median_response_time_hours
+        data_type: "{{ 'float64' if target.type == 'bigquery' else 'double' }}"
+      - name: avg_rating
+        data_type: "{{ 'float64' if target.type == 'bigquery' else 'double' }}"
+      - name: ratings_count
+        data_type: bigint
+      - name: performance_segment
+        data_type: string
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [not_enough_data, unresponsive, top_mentor, standard]
 
   - name: agg_company_engagement_monthly
     description: >
@@ -54,7 +99,28 @@ models:
       at-risk flag for customer success.
     config:
       tags: [product]
+      contract:
+        enforced: true
     data_tests:
       - dbt_utils.unique_combination_of_columns:
           arguments:
             combination_of_columns: [company_id, month_start]
+    columns:
+      - name: company_id
+        data_type: integer
+      - name: month_start
+        data_type: date
+      - name: plan_name
+        data_type: string
+      - name: mrr_eur
+        data_type: "{{ 'float64' if target.type == 'bigquery' else 'double' }}"
+      - name: requests_received
+        data_type: bigint
+      - name: conversations_completed
+        data_type: bigint
+      - name: conversations_completed_rolling_3m
+        data_type: bigint
+      - name: cost_per_conversation_eur
+        data_type: "{{ 'float64' if target.type == 'bigquery' else 'double' }}"
+      - name: is_at_risk
+        data_type: boolean
