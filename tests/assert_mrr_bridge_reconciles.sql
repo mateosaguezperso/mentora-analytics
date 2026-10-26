@@ -16,18 +16,19 @@ with bridge as (
 
 )
 
-select *
+-- a singular test returns the failing rows, whatever their columns
+select *  -- noqa: AM04
 from bridge
 where abs(
         opening_mrr_eur
-      + new_mrr_eur
-      + reactivation_mrr_eur
-      + expansion_mrr_eur
-      - contraction_mrr_eur
-      - churned_mrr_eur
-      - closing_mrr_eur
+        + new_mrr_eur
+        + reactivation_mrr_eur
+        + expansion_mrr_eur
+        - contraction_mrr_eur
+        - churned_mrr_eur
+        - closing_mrr_eur
     ) > 0.01
-   or (
+    or (
         previous_closing_mrr_eur is not null
-    and abs(opening_mrr_eur - previous_closing_mrr_eur) > 0.01
-   )
+        and abs(opening_mrr_eur - previous_closing_mrr_eur) > 0.01
+    )

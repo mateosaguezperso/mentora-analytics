@@ -36,9 +36,10 @@ select
     -- NRR: what the opening customer base is worth one month later
     round(
         (opening_mrr_eur + expansion_mrr_eur - contraction_mrr_eur - churned_mrr_eur)
-        / nullif(opening_mrr_eur, 0)
-    , 4)                                                                               as net_revenue_retention,
+        / nullif(opening_mrr_eur, 0),
+        4
+    )                                                                                  as net_revenue_retention,
     round(1.0 * churned_companies / nullif(opening_paying_companies, 0), 4)
-                                                                                       as logo_churn_rate
+        as logo_churn_rate
 
 from monthly

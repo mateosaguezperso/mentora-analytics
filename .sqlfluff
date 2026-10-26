@@ -1,0 +1,59 @@
+[sqlfluff]
+# Lint the compiled SQL so cross-db macros (dbt.datediff, ...) and refs resolve.
+templater = dbt
+# CI runs on DuckDB; the same models also run on BigQuery.
+dialect = duckdb
+max_line_length = 120
+# LT01 (spacing): the project hand-aligns `as alias` and `then` columns. SQLFluff
+#   checks alignment on the *compiled* SQL, where Jinja macros change widths,
+#   so the rule can't agree with the source layout. Alignment is kept by hand.
+# ST06 (column order) fights readable "keys, then attributes, then metrics" ordering.
+# ST09 (join condition order) would rewrite range joins like `x.start < y.end` into
+#   harder-to-read `y.end > x.start`.
+# RF04 flags legitimate column names such as `source` or `status`.
+exclude_rules = LT01, ST06, ST09, RF04
+# Long Jinja-heavy models are fine; don't skip them.
+large_file_skip_byte_limit = 0
+
+[sqlfluff:templater:dbt]
+project_dir = .
+profiles_dir = .
+target = duckdb
+
+[sqlfluff:indentation]
+tab_space_size = 4
+indent_unit = space
+implicit_indents = allow
+# `and` lines of a join condition stay aligned with `on`.
+indented_on_contents = false
+
+[sqlfluff:rules:capitalisation.keywords]
+capitalisation_policy = lower
+
+[sqlfluff:rules:capitalisation.identifiers]
+extended_capitalisation_policy = lower
+
+[sqlfluff:rules:capitalisation.functions]
+extended_capitalisation_policy = lower
+
+[sqlfluff:rules:capitalisation.literals]
+capitalisation_policy = lower
+
+[sqlfluff:rules:capitalisation.types]
+extended_capitalisation_policy = lower
+
+[sqlfluff:rules:aliasing.table]
+aliasing = explicit
+
+[sqlfluff:rules:aliasing.column]
+aliasing = explicit
+
+[sqlfluff:rules:aliasing.expression]
+allow_scalar = false
+
+[sqlfluff:rules:ambiguous.column_references]
+group_by_and_order_by_style = consistent
+
+[sqlfluff:rules:convention.terminator]
+multiline_newline = false
+require_final_semicolon = false

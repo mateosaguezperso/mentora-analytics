@@ -38,8 +38,10 @@ joined as (
         coalesce(milestones.bookings_requested, 0)                          as bookings_requested,
         coalesce(milestones.conversations_completed, 0)                     as conversations_completed,
 
-        cast({{ dbt.dateadd('day', var('activation_window_days'), 'students.signed_up_at') }}
-             as {{ dbt.type_timestamp() }})                                 as activation_deadline_at
+        cast(
+            {{ dbt.dateadd('day', var('activation_window_days'), 'students.signed_up_at') }}
+            as {{ dbt.type_timestamp() }}
+        )                                                                   as activation_deadline_at
 
     from students
     left join milestones
@@ -49,14 +51,14 @@ joined as (
 
 select
     *,
-    {{ dbt.datediff('signed_up_at', 'first_completed_at', 'day') }}       as days_to_first_conversation,
+    {{ dbt.datediff('signed_up_at', 'first_completed_at', 'day') }}       as days_to_first_conversation,  -- noqa: LT05
 
     first_requested_at is not null                                         as has_requested,
 
     coalesce(first_completed_at <= activation_deadline_at, false)          as is_activated,
 
     activation_deadline_at
-        <= cast('{{ var("analysis_end_date") }}' as {{ dbt.type_timestamp() }})
-                                                                           as is_activation_window_closed
+    <= cast('{{ var("analysis_end_date") }}' as {{ dbt.type_timestamp() }})
+        as is_activation_window_closed
 
 from joined

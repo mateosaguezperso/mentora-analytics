@@ -1,0 +1,24 @@
+# Install once:  pip install pre-commit && pre-commit install
+# Run on demand: pre-commit run --all-files
+# The SQLFluff hook uses the dbt templater, so run `dbt deps` once beforehand.
+exclude: ^(seeds/|target/|dbt_packages/)
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-merge-conflict
+      - id: check-added-large-files
+
+  - repo: https://github.com/sqlfluff/sqlfluff
+    rev: 4.4.0
+    hooks:
+      - id: sqlfluff-lint
+        files: ^(models|tests|analyses)/.*\.sql$
+        additional_dependencies:
+          - sqlfluff-templater-dbt==4.4.0
+          - dbt-core>=1.10,<2.0
+          - dbt-duckdb>=1.10,<2.0

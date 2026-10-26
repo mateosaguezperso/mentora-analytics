@@ -28,26 +28,37 @@ with bookings as (
 
     select * from {{ ref('int_bookings__pivoted') }}
 
+    -- SQLFluff counts the Jinja block as an extra indent level: keep the readable layout.
+    -- noqa: disable=LT02
     {% if is_incremental() %}
-    where last_updated_at >= (
-        select
-            cast({{ dbt.dateadd('day', -1 * var('incremental_lookback_days'), 'max(last_updated_at)') }}
-                 as {{ dbt.type_timestamp() }})
-        from {{ this }}
-    )
+        where last_updated_at >= (
+            select
+                cast(
+                    {{ dbt.dateadd('day', -1 * var('incremental_lookback_days'), 'max(last_updated_at)') }}
+                    as {{ dbt.type_timestamp() }}
+                )
+            from {{ this }}
+        )
     {% endif %}
+    -- noqa: enable=LT02
 
 ),
 
 mentors as (
 
-    select mentor_id, company_id from {{ ref('stg_platform__mentors') }}
+    select
+        mentor_id,
+        company_id
+    from {{ ref('stg_platform__mentors') }}
 
 ),
 
 reviews as (
 
-    select booking_id, rating from {{ ref('stg_platform__reviews') }}
+    select
+        booking_id,
+        rating
+    from {{ ref('stg_platform__reviews') }}
 
 ),
 
@@ -77,10 +88,11 @@ final as (
 
         -- durations
         round(
-            {{ dbt.datediff('bookings.requested_at', 'bookings.responded_at', 'minute') }} / 60.0
-        , 2)                                                 as response_time_hours,
+            {{ dbt.datediff('bookings.requested_at', 'bookings.responded_at', 'minute') }} / 60.0,  -- noqa: LT05
+            2
+        )                                                    as response_time_hours,
         {{ dbt.datediff('bookings.requested_at', 'bookings.scheduled_at', 'day') }}
-                                                             as lead_time_days,
+            as lead_time_days,
 
         reviews.rating,
         bookings.last_updated_at

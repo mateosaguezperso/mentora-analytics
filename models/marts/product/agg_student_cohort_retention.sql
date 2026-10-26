@@ -23,7 +23,9 @@ with completed_bookings as (
 
 student_months as (
 
-    select distinct student_id, activity_month
+    select distinct
+        student_id,
+        activity_month
     from completed_bookings
 
 ),
@@ -92,7 +94,7 @@ activity as (
 select
     grid.cohort_month,
     grid.activity_month,
-    {{ dbt.datediff('grid.cohort_month', 'grid.activity_month', 'month') }}  as months_since_first,
+    {{ dbt.datediff('grid.cohort_month', 'grid.activity_month', 'month') }}  as months_since_first,  -- noqa: LT05
     grid.cohort_size,
     coalesce(activity.active_students, 0)                                   as active_students,
     round(1.0 * coalesce(activity.active_students, 0) / grid.cohort_size, 4) as retention_rate

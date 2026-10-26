@@ -70,9 +70,9 @@ select
     case
         when coalesce(rates.requests_received, 0) < 5           then 'not_enough_data'
         when rates.response_rate < 0.8
-          or rates.median_response_time_hours > 72              then 'unresponsive'
+            or rates.median_response_time_hours > 72            then 'unresponsive'
         when rates.acceptance_rate >= 0.85
-         and coalesce(rates.avg_rating, 0) >= 4.3               then 'top_mentor'
+            and coalesce(rates.avg_rating, 0) >= 4.3            then 'top_mentor'
         else 'standard'
     end                                           as performance_segment
 

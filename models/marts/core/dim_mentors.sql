@@ -8,7 +8,11 @@ with mentors as (
 
 companies as (
 
-    select company_id, company_name, industry from {{ ref('stg_platform__companies') }}
+    select
+        company_id,
+        company_name,
+        industry
+    from {{ ref('stg_platform__companies') }}
 
 )
 
