@@ -1,0 +1,37 @@
+name: dbt CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  build:
+    name: dbt build (DuckDB)
+    runs-on: ubuntu-latest
+    env:
+      DBT_TARGET: duckdb
+      DBT_PROFILES_DIR: .
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: dbt deps
+        run: dbt deps
+
+      - name: Load raw data (simulates the EL step)
+        run: dbt seed
+
+      - name: Build models + data tests + unit tests
+        run: dbt build --exclude resource_type:seed --fail-fast
+
+      - name: Second run (exercises the incremental path)
+        run: dbt build --select fct_bookings+ --exclude resource_type:seed
