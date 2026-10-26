@@ -1,0 +1,34 @@
+selectors:
+  - name: nightly
+    description: Full nightly run (everything except the finance layer, refreshed separately).
+    default: false
+    definition:
+      union:
+        - method: path
+          value: models
+        - exclude:
+            - method: tag
+              value: finance
+
+  - name: finance_close
+    description: Monthly finance close — MRR models and everything upstream of them.
+    definition:
+      method: tag
+      value: finance
+      parents: true
+
+  - name: comex_dashboard
+    description: Rebuild only what feeds the Comex dashboard (exposure + its parents).
+    definition:
+      method: exposure
+      value: comex_growth_dashboard
+      parents: true
+
+  - name: slim_ci
+    description: >
+      PR checks: modified models and their children only, deferring
+      unchanged parents to the production manifest (--state).
+    definition:
+      method: state
+      value: modified
+      children: true

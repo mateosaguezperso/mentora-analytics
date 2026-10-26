@@ -1,0 +1,34 @@
+version: 2
+
+exposures:
+  - name: comex_growth_dashboard
+    label: Comex — Growth & Revenue
+    type: dashboard
+    maturity: high
+    url: https://metabase.example.com/dashboard/1
+    description: >
+      Monthly board-level dashboard: MRR bridge, NRR, logo churn, student
+      activation by channel and cohort retention heatmap.
+    depends_on:
+      - ref('agg_mrr_monthly')
+      - ref('dim_students')
+      - ref('agg_student_cohort_retention')
+    owner:
+      name: Mateo Saguez
+      email: mateo.saguez@gmail.com
+
+  - name: customer_success_cockpit
+    label: Customer Success — Account health
+    type: dashboard
+    maturity: medium
+    url: https://metabase.example.com/dashboard/2
+    description: >
+      Used weekly by CSMs: at-risk accounts, cost per conversation, mentor
+      responsiveness per company.
+    depends_on:
+      - ref('agg_company_engagement_monthly')
+      - ref('agg_mentor_performance')
+      - ref('dim_companies')
+    owner:
+      name: Mateo Saguez
+      email: mateo.saguez@gmail.com

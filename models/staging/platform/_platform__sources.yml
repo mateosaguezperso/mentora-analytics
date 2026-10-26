@@ -1,0 +1,69 @@
+version: 2
+
+sources:
+  - name: platform
+    description: >
+      Production database of the Mentora web app (Postgres), replicated to the
+      warehouse by an EL tool. In this repo the raw layer is simulated by seeds
+      (`scripts/generate_data.py`).
+    schema: "{{ 'raw' if target.name == 'prod' else target.schema ~ '_raw' }}"
+    loader: seeds (simulates Stitch / Airbyte)
+
+    config:
+      freshness:
+        warn_after: { count: 24, period: hour }
+      loaded_at_field: updated_at
+
+    tables:
+      - name: companies
+        identifier: raw_companies
+        description: B2B customers. One row per company.
+        config:
+          freshness: null
+        columns:
+          - name: id
+            data_tests: [unique, not_null]
+
+      - name: subscriptions
+        identifier: raw_subscriptions
+        description: >
+          Subscription periods. A plan change closes the current row and opens
+          a new one, so a company can have several rows.
+        config:
+          freshness: null
+        columns:
+          - name: id
+            data_tests: [unique, not_null]
+
+      - name: mentors
+        identifier: raw_mentors
+        description: Employees of customer companies who mentor students.
+        config:
+          freshness: null
+        columns:
+          - name: id
+            data_tests: [unique, not_null]
+
+      - name: students
+        identifier: raw_students
+        description: Student accounts (B2C side of the marketplace).
+        config:
+          freshness: null
+        columns:
+          - name: id
+            data_tests: [unique, not_null]
+
+      - name: bookings
+        identifier: raw_bookings
+        description: >
+          CDC log of booking status changes: **one row per status transition**,
+          not per booking. Rows arrive unordered; status values are not
+          normalised (casing, trailing spaces).
+
+      - name: reviews
+        identifier: raw_reviews
+        description: >
+          Student ratings after a completed conversation. Contains exact
+          duplicates (webhook fired twice).
+        config:
+          freshness: null

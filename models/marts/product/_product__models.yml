@@ -1,0 +1,60 @@
+version: 2
+
+models:
+  - name: agg_student_cohort_retention
+    description: >
+      Monthly retention of students, by cohort of first completed conversation.
+      Exact-month retention (active in month k), full grid with zeros.
+      Built for a Metabase pivot / heatmap.
+    config:
+      tags: [product]
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [cohort_month, activity_month]
+      - dbt_utils.expression_is_true:
+          arguments:
+            expression: "months_since_first > 0 or retention_rate = 1"
+          config:
+            description: Month 0 retention is 100 % by definition of the cohort.
+    columns:
+      - name: retention_rate
+        data_tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              arguments:
+                min_value: 0
+                max_value: 1
+
+  - name: agg_mentor_performance
+    description: >
+      Lifetime supply-side KPIs per mentor (response, acceptance, completion,
+      median response time, rating) and a performance segment for the
+      community team.
+    config:
+      tags: [product]
+    columns:
+      - name: mentor_id
+        data_tests: [unique, not_null]
+      - name: performance_segment
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [not_enough_data, unresponsive, top_mentor, standard]
+      - name: response_rate
+        data_tests:
+          - dbt_utils.accepted_range:
+              arguments:
+                min_value: 0
+                max_value: 1
+
+  - name: agg_company_engagement_monthly
+    description: >
+      Paying company x month: usage vs. MRR, cost per conversation and an
+      at-risk flag for customer success.
+    config:
+      tags: [product]
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [company_id, month_start]

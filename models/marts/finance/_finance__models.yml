@@ -1,0 +1,62 @@
+version: 2
+
+models:
+  - name: fct_mrr_movements
+    description: >
+      MRR bridge at company x month grain: previous MRR, current MRR and the
+      movement type (new, expansion, contraction, churn, reactivation, retained).
+    config:
+      tags: [finance]
+    columns:
+      - name: company_month_key
+        description: Surrogate key on (company_id, month_start).
+        data_tests: [unique, not_null]
+      - name: company_id
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('dim_companies')
+                field: company_id
+      - name: mrr_movement
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [new, reactivation, expansion, contraction, churn, retained]
+
+  - name: agg_mrr_monthly
+    description: >
+      Monthly MRR bridge, NRR and logo churn. Source of truth for the Comex
+      revenue dashboard.
+    config:
+      tags: [finance]
+    columns:
+      - name: month_start
+        data_tests: [unique, not_null]
+      - name: closing_mrr_eur
+        data_tests: [not_null]
+
+unit_tests:
+  - name: test_mrr_movements_classification
+    description: >
+      One company goes through every movement type:
+      new -> retained -> expansion -> contraction -> churn -> (inactive, filtered) -> reactivation.
+    model: fct_mrr_movements
+    given:
+      - input: ref('int_companies__mrr_monthly')
+        rows:
+          - { company_id: 1, month_start: "2025-01-01", plan_name: starter,    mrr_eur: 499 }
+          - { company_id: 1, month_start: "2025-02-01", plan_name: starter,    mrr_eur: 499 }
+          - { company_id: 1, month_start: "2025-03-01", plan_name: enterprise, mrr_eur: 2900 }
+          - { company_id: 1, month_start: "2025-04-01", plan_name: growth,     mrr_eur: 1290 }
+          - { company_id: 1, month_start: "2025-05-01", plan_name: null,       mrr_eur: 0 }
+          - { company_id: 1, month_start: "2025-06-01", plan_name: null,       mrr_eur: 0 }
+          - { company_id: 1, month_start: "2025-07-01", plan_name: starter,    mrr_eur: 499 }
+    expect:
+      rows:
+        - { month_start: "2025-01-01", mrr_movement: new,          mrr_change_eur: 499 }
+        - { month_start: "2025-02-01", mrr_movement: retained,     mrr_change_eur: 0 }
+        - { month_start: "2025-03-01", mrr_movement: expansion,    mrr_change_eur: 2401 }
+        - { month_start: "2025-04-01", mrr_movement: contraction,  mrr_change_eur: -1610 }
+        - { month_start: "2025-05-01", mrr_movement: churn,        mrr_change_eur: -1290 }
+        - { month_start: "2025-07-01", mrr_movement: reactivation, mrr_change_eur: 499 }

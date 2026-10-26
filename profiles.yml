@@ -1,0 +1,27 @@
+# Project-level profiles.yml (dbt looks here first when run from the repo root).
+# No secrets are stored here: credentials come from env vars / gcloud ADC.
+mentora_analytics:
+  target: "{{ env_var('DBT_TARGET', 'duckdb') }}"
+  outputs:
+
+    # Zero-setup local target, also used by CI. `dbt build` works out of the box.
+    duckdb:
+      type: duckdb
+      path: "mentora.duckdb"
+      schema: main
+      threads: 4
+
+    # BigQuery dev target (personal sandbox).
+    # Auth: `gcloud auth application-default login`
+    bigquery:
+      type: bigquery
+      method: oauth
+      project: "{{ env_var('GCP_PROJECT_ID', 'your-gcp-project') }}"
+      dataset: "{{ env_var('DBT_BQ_DATASET', 'dbt_dev') }}"
+      location: EU
+      threads: 8
+      priority: interactive
+      job_execution_timeout_seconds: 300
+      job_retries: 1
+      # Cost guardrail: any query scanning more than 1 GB fails instead of billing.
+      maximum_bytes_billed: 1000000000

@@ -1,0 +1,113 @@
+version: 2
+
+models:
+  - name: stg_platform__companies
+    description: One row per customer company.
+    columns:
+      - name: company_id
+        data_tests: [unique, not_null]
+      - name: company_name
+        data_tests: [not_null]
+      - name: employee_range
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ["50-249", "250-999", "1000-4999", "5000+"]
+
+  - name: stg_platform__subscriptions
+    description: One row per subscription period. Amounts converted from cents to euros.
+    columns:
+      - name: subscription_id
+        data_tests: [unique, not_null]
+      - name: company_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_platform__companies')
+                field: company_id
+      - name: plan_name
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [starter, growth, enterprise]
+      - name: mrr_eur
+        data_tests:
+          - dbt_utils.accepted_range:
+              arguments:
+                min_value: 0
+                inclusive: false
+    data_tests:
+      - dbt_utils.expression_is_true:
+          arguments:
+            expression: "ended_at is null or ended_at > started_at"
+
+  - name: stg_platform__mentors
+    description: One row per mentor (employee of a customer company).
+    columns:
+      - name: mentor_id
+        data_tests: [unique, not_null]
+      - name: company_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_platform__companies')
+                field: company_id
+
+  - name: stg_platform__students
+    description: One row per student account. Emails normalised (lowercase, trimmed).
+    columns:
+      - name: student_id
+        data_tests: [unique, not_null]
+      - name: email
+        data_tests: [unique, not_null, valid_email]
+      - name: acquisition_channel
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [school_partnership, organic, seo, paid_social, referral]
+
+  - name: stg_platform__booking_events
+    description: >
+      Cleaned CDC log of booking status transitions.
+      Grain: one row per (booking_id, booking_status).
+    columns:
+      - name: booking_id
+        data_tests: [not_null]
+      - name: booking_status
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [requested, accepted, declined, cancelled, completed, expired]
+      - name: student_id
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('stg_platform__students')
+                field: student_id
+      - name: mentor_id
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('stg_platform__mentors')
+                field: mentor_id
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [booking_id, booking_status]
+
+  - name: stg_platform__reviews
+    description: One row per review, exact duplicates removed.
+    columns:
+      - name: review_id
+        data_tests: [unique, not_null]
+      - name: booking_id
+        description: A booking can be reviewed at most once.
+        data_tests: [unique, not_null]
+      - name: rating
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [1, 2, 3, 4, 5]
+                quote: false

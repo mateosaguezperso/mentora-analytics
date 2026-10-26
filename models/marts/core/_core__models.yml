@@ -1,0 +1,130 @@
+version: 2
+
+models:
+  - name: fct_bookings
+    description: >
+      Booking fact table. One row per conversation request with its current
+      status, lifecycle timestamps, funnel flags, durations and rating.
+      Incremental (upsert on booking_id with a lookback window).
+    config:
+      tags: [core, incremental]
+    columns:
+      - name: booking_id
+        description: Primary key.
+        data_tests: [unique, not_null]
+      - name: student_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_students')
+                field: student_id
+      - name: mentor_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_mentors')
+                field: mentor_id
+      - name: company_id
+        description: Company of the mentor (denormalised for BI filtering / clustering).
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_companies')
+                field: company_id
+      - name: current_status
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [requested, accepted, declined, cancelled, completed, expired]
+      - name: response_time_hours
+        description: Hours between the request and the mentor's first answer (accept or decline).
+        data_tests:
+          - dbt_utils.accepted_range:
+              arguments:
+                min_value: 0
+      - name: rating
+        description: 1-5 rating left by the student. Null if not reviewed.
+    data_tests:
+      - dbt_utils.expression_is_true:
+          arguments:
+            expression: "not is_completed or completed_at <= cast('{{ var(\"analysis_end_date\") }}' as {{ dbt.type_timestamp() }})"
+          config:
+            description: No conversation can be completed after the extraction date.
+      - dbt_utils.expression_is_true:
+          arguments:
+            expression: "rating is null or is_completed"
+          config:
+            description: Only completed conversations can be rated.
+
+  - name: dim_students
+    description: One row per student with activation flags.
+    config:
+      tags: [core]
+    columns:
+      - name: student_id
+        data_tests: [unique, not_null]
+      - name: is_activated
+        description: >
+          True if the student completed a first conversation within
+          `activation_window_days` (default 30) of signup.
+        data_tests: [not_null]
+      - name: is_activation_window_closed
+        description: >
+          False for students who signed up less than `activation_window_days`
+          before the analysis date. Filter on it to avoid immature cohorts.
+
+  - name: dim_mentors
+    description: One row per mentor, enriched with company attributes.
+    config:
+      tags: [core]
+    columns:
+      - name: mentor_id
+        data_tests: [unique, not_null]
+
+  - name: dim_companies
+    description: One row per customer company with its current plan, MRR and churn status.
+    config:
+      tags: [core]
+    columns:
+      - name: company_id
+        data_tests: [unique, not_null]
+      - name: current_mrr_eur
+        data_tests: [not_null]
+    data_tests:
+      - dbt_utils.expression_is_true:
+          arguments:
+            expression: "is_active_customer or churned_month is not null"
+          config:
+            description: Every non-active customer must have a churn month.
+
+unit_tests:
+  - name: test_dim_students_activation_window_boundaries
+    description: >
+      Activation window is inclusive: completing exactly 30 days after signup
+      counts, one minute later does not. Students without bookings are not
+      activated (and not null).
+    model: dim_students
+    overrides:
+      vars:
+        activation_window_days: 30
+        analysis_end_date: "2026-10-01"
+    given:
+      - input: ref('stg_platform__students')
+        rows:
+          - { student_id: 1, signed_up_at: "2025-03-01 10:00:00" }
+          - { student_id: 2, signed_up_at: "2025-03-01 10:00:00" }
+          - { student_id: 3, signed_up_at: "2025-03-01 10:00:00" }
+          - { student_id: 4, signed_up_at: "2026-09-20 10:00:00" }
+      - input: ref('int_students__booking_milestones')
+        rows:
+          - { student_id: 1, first_completed_at: "2025-03-31 10:00:00" }
+          - { student_id: 2, first_completed_at: "2025-03-31 10:01:00" }
+    expect:
+      rows:
+        - { student_id: 1, is_activated: true,  is_activation_window_closed: true }
+        - { student_id: 2, is_activated: false, is_activation_window_closed: true }
+        - { student_id: 3, is_activated: false, is_activation_window_closed: true }
+        - { student_id: 4, is_activated: false, is_activation_window_closed: false }
