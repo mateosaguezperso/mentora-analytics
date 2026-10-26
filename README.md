@@ -143,6 +143,20 @@ BigQuery (dev/prod) and DuckDB (local/CI).
 prefixed, prod uses clean names), and a frozen `analysis_end_date` var so every
 run is reproducible.
 
+**8. Contracts on every public mart**
+The 9 marts read by Metabase have an enforced [model contract](https://docs.getdbt.com/docs/mesh/govern/model-contracts):
+every column and its type is declared, so a change that renames, drops or
+retypes a column fails the build instead of silently breaking a dashboard.
+Types are written once for both warehouses (floats render to `double` on DuckDB
+and `float64` on BigQuery). Writing them surfaced a real portability issue:
+flag counts came out as DuckDB `HUGEINT`; they are now plain `BIGINT` / `INT64`.
+
+**9. Linted SQL, in CI and before every commit**
+[SQLFluff](.sqlfluff) with the dbt templater (lowercase, explicit aliases,
+trailing commas, 120-char lines) runs as a [pre-commit](.pre-commit-config.yaml)
+hook and as a CI job that annotates the PR. Rules that conflict with the
+project's hand-aligned layout are disabled with the reason written next to them.
+
 ---
 
 ## Testing strategy
@@ -155,6 +169,7 @@ run is reproducible.
 |**Singular tests**|Cross-model invariants|[MRR bridge reconciles](tests/assert_mrr_bridge_reconciles.sql), [no overlapping subscriptions](tests/assert_no_overlapping_subscriptions.sql)|
 |**Unit tests** (dbt ≥ 1.8)|Tricky logic on hand-written fixtures|CDC tie-break, activation window boundary (exactly 30 days), every MRR movement type|
 |**Source freshness**|Pipeline is alive|warn if `bookings` not updated for 24 h|
+|**Model contracts**|The interface BI depends on|column names and types of all 9 marts enforced at build time|
 
 > While building this project, the test *"only completed conversations can be
 > rated"* caught a real bug in the data generator (mentors accepting a request
@@ -194,6 +209,14 @@ export DBT_TARGET=bigquery GCP_PROJECT_ID=<your-project> DBT_BQ_DATASET=dbt_<you
 dbt deps && dbt seed && dbt build --exclude resource_type:seed
 ```
 
+### Contributing: lint before you commit
+
+```bash
+pip install -r requirements-dev.txt
+pre-commit install                        # SQLFluff + YAML / whitespace hooks on every commit
+sqlfluff lint models tests analyses       # or run it on demand
+```
+
 ### Useful selectors ([`selectors.yml`](selectors.yml))
 
 ```bash
@@ -218,7 +241,7 @@ offsets churn.
 ## Project structure
 
 ```
-├── .github/workflows/      # CI (dbt build on every PR) + docs → GitHub Pages
+├── .github/workflows/      # CI (lint + dbt build on every PR) + docs → GitHub Pages
 ├── analyses/               # ad-hoc queries (Metabase native questions)
 ├── docs/                   # doc blocks (docs site homepage)
 ├── macros/                 # schema naming, cents → euros, cross-db median
@@ -234,14 +257,15 @@ offsets churn.
 ├── seeds/                  # raw layer (synthetic)
 ├── tests/                  # singular + custom generic tests
 ├── dbt_project.yml · packages.yml · profiles.yml · selectors.yml
+├── .sqlfluff · .pre-commit-config.yaml · requirements-dev.txt
 ```
 
 ## Roadmap
 
 * [ ] Semantic layer (MetricFlow) for activation rate, MRR and NRR
 * [ ] SCD2 snapshot on `subscriptions` (plan history without relying on the source)
-* [ ] Model contracts on public marts
-* [ ] SQLFluff linting + pre-commit
+* [x] Model contracts on public marts
+* [x] SQLFluff linting + pre-commit
 * [ ] Orchestration (Dagster or Airflow) with daily / monthly schedules
 
 ---
